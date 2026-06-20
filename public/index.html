@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechKart PC Store</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-header">
+        <div>
+            <p class="eyebrow">PC components</p>
+            <h1>TechKart</h1>
+        </div>
+        <div class="header-actions" role="group" aria-label="Main views">
+            <button class="tab-button active" data-view="store" type="button">Store</button>
+            <button class="tab-button" data-view="admin" type="button">Admin</button>
+            <button class="icon-button" id="refreshButton" type="button" title="Refresh data" aria-label="Refresh data">R</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="summary-grid" id="summaryGrid" aria-label="Store summary"></section>
+
+        <section class="view active" id="storeView">
+            <div class="store-layout">
+                <section class="catalog-panel" aria-labelledby="catalogTitle">
+                    <div class="panel-heading">
+                        <div>
+                            <p class="eyebrow">Live catalog</p>
+                            <h2 id="catalogTitle">Products</h2>
+                        </div>
+                        <label class="search-box">
+                            <span>Search</span>
+                            <input id="searchInput" type="search" placeholder="CPU, GPU, SSD">
+                        </label>
+                    </div>
+                    <div class="category-strip" id="categoryStrip" aria-label="Categories"></div>
+                    <div class="product-grid" id="productGrid"></div>
+                </section>
+
+                <aside class="cart-panel" aria-labelledby="cartTitle">
+                    <div class="panel-heading compact">
+                        <div>
+                            <p class="eyebrow">Checkout</p>
+                            <h2 id="cartTitle">Cart</h2>
+                        </div>
+                        <button id="clearCartButton" class="ghost-button" type="button">Clear</button>
+                    </div>
+                    <div class="cart-list" id="cartList"></div>
+                    <div class="cart-total">
+                        <span>Total</span>
+                        <strong id="cartTotal">Rs.0</strong>
+                    </div>
+                    <button id="checkoutButton" class="primary-button wide" type="button">Place Order</button>
+                </aside>
+            </div>
+        </section>
+
+        <section class="view" id="adminView">
+            <div class="admin-layout">
+                <section class="admin-panel" aria-labelledby="adminProductTitle">
+                    <div class="panel-heading">
+                        <div>
+                            <p class="eyebrow">Inventory</p>
+                            <h2 id="adminProductTitle">Product Manager</h2>
+                        </div>
+                        <label class="pin-box">
+                            <span>PIN</span>
+                            <input id="pinInput" type="password" inputmode="numeric" placeholder="1234">
+                        </label>
+                    </div>
+
+                    <form id="productForm" class="product-form">
+                        <input type="hidden" id="productId">
+                        <label>
+                            <span>Name</span>
+                            <input id="productName" type="text" required>
+                        </label>
+                        <label>
+                            <span>Category</span>
+                            <input id="productCategory" type="text" required>
+                        </label>
+                        <label>
+                            <span>Price</span>
+                            <input id="productPrice" type="number" min="1" step="0.01" required>
+                        </label>
+                        <label>
+                            <span>Stock</span>
+                            <input id="productStock" type="number" min="0" step="1" required>
+                        </label>
+                        <div class="form-actions">
+                            <button id="saveProductButton" class="primary-button" type="submit">Add Product</button>
+                            <button id="cancelEditButton" class="ghost-button" type="button">Cancel</button>
+                        </div>
+                    </form>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Price</th>
+                                    <th>Stock</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventoryTable"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <aside class="admin-side">
+                    <section class="admin-card" aria-labelledby="lowStockTitle">
+                        <div class="panel-heading compact">
+                            <div>
+                                <p class="eyebrow">Report</p>
+                                <h2 id="lowStockTitle">Low Stock</h2>
+                            </div>
+                            <label class="limit-box">
+                                <span>Limit</span>
+                                <input id="lowStockLimit" type="number" min="0" value="5">
+                            </label>
+                        </div>
+                        <div id="lowStockList" class="mini-list"></div>
+                    </section>
+
+                    <section class="admin-card" aria-labelledby="ordersTitle">
+                        <div class="panel-heading compact">
+                            <div>
+                                <p class="eyebrow">History</p>
+                                <h2 id="ordersTitle">Orders</h2>
+                            </div>
+                            <button id="loadOrdersButton" class="ghost-button" type="button">Load</button>
+                        </div>
+                        <div id="ordersList" class="orders-list"></div>
+                    </section>
+                </aside>
+            </div>
+        </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
