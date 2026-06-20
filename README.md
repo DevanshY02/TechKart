@@ -52,6 +52,33 @@ Open the app in your browser:
 http://localhost:8080
 ```
 
+## Deploy Online
+
+This app needs a web service host because it has a Java backend. GitHub Pages will not run the backend.
+
+One simple option is Render:
+
+1. Open [Render](https://render.com) and sign in.
+2. Click **New** > **Web Service**.
+3. Connect this GitHub repo: `https://github.com/DevanshY02/TechKart`
+4. Choose the `main` branch.
+5. Select Docker as the runtime. Render will use the included `Dockerfile`.
+6. Set the health check path to:
+
+```text
+/api/health
+```
+
+7. Create the service and wait for the deploy to finish.
+
+Render will give you a public URL like:
+
+```text
+https://techkart.onrender.com
+```
+
+The app reads the `PORT` environment variable automatically, so it can run on hosted platforms instead of only `localhost`.
+
 ## Admin Access
 
 Use this demo PIN in the Admin tab:
@@ -77,3 +104,5 @@ Admin-only endpoints require the `X-Admin-Pin` header or a `pin` value.
 ## Notes
 
 This is a learning/demo project. The admin PIN is intentionally simple and stored in code, so replace it with real authentication before using this in production.
+
+Product and order changes are saved to local text files. On many free hosting services, those runtime file changes can reset after a redeploy or restart. Use a database or persistent disk if you need permanent hosted data.

@@ -217,7 +217,7 @@ public class Main {
         loadOrdersFromFile();
 
         int port = getPort(args);
-        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", port), 0);
         server.createContext("/", Main::handleRequest);
         server.setExecutor(Executors.newCachedThreadPool());
         server.start();
