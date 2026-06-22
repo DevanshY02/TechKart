@@ -63,13 +63,14 @@ One simple option is Render:
 3. Connect this GitHub repo: `https://github.com/DevanshY02/TechKart`
 4. Choose the `main` branch.
 5. Select Docker as the runtime. Render will use the included `Dockerfile`.
-6. Set the health check path to:
+6. Add an environment variable named `ADMIN_PIN` with a strong private value.
+7. Set the health check path to:
 
 ```text
 /api/health
 ```
 
-7. Create the service and wait for the deploy to finish.
+8. Create the service and wait for the deploy to finish.
 
 Render will give you a public URL like:
 
@@ -81,11 +82,21 @@ The app reads the `PORT` environment variable automatically, so it can run on ho
 
 ## Admin Access
 
-Use this demo PIN in the Admin tab:
+The public store page does not show the Admin tab. Open the admin page directly:
 
 ```text
-1234
+/admin
 ```
+
+For the deployed Render app, that means:
+
+```text
+https://techkart-cgyg.onrender.com/admin
+```
+
+Use the private `ADMIN_PIN` value from your Render environment variables.
+
+If `ADMIN_PIN` is not configured, the server generates a temporary PIN at startup and prints it in the server logs. Set `ADMIN_PIN` in Render for a stable private admin password.
 
 ## API Endpoints
 
@@ -99,10 +110,10 @@ Use this demo PIN in the Admin tab:
 - `DELETE /api/products/{id}`
 - `GET /api/reports/low-stock`
 
-Admin-only endpoints require the `X-Admin-Pin` header or a `pin` value.
+Admin-only endpoints require the `X-Admin-Pin` header or a `pin` value. Keep this PIN out of GitHub.
 
 ## Notes
 
-This is a learning/demo project. The admin PIN is intentionally simple and stored in code, so replace it with real authentication before using this in production.
+This is a learning/demo project. The admin PIN is a basic shared secret, so replace it with real user authentication before using this in production.
 
 Product and order changes are saved to local text files. On many free hosting services, those runtime file changes can reset after a redeploy or restart. Use a database or persistent disk if you need permanent hosted data.

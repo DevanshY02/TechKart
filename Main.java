@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -200,7 +201,6 @@ class ApiException extends RuntimeException {
 }
 
 public class Main {
-    private static final String ADMIN_PIN = "1234";
     private static final Path PRODUCTS_FILE = Paths.get("products.txt");
     private static final Path ORDERS_FILE = Paths.get("orders.txt");
     private static final Path PUBLIC_DIR = Paths.get("public").toAbsolutePath().normalize();
@@ -211,8 +211,11 @@ public class Main {
     private static final ArrayList<Order> orders = new ArrayList<>();
     private static int nextProductId = 1;
     private static int nextOrderId = 1001;
+    private static String adminPin;
+    private static boolean adminPinConfigured;
 
     public static void main(String[] args) throws IOException {
+        adminPin = resolveAdminPin();
         loadProductsFromFile();
         loadOrdersFromFile();
 
@@ -223,7 +226,23 @@ public class Main {
         server.start();
 
         System.out.println("TechKart is running at http://localhost:" + port);
-        System.out.println("Admin PIN: " + ADMIN_PIN);
+        System.out.println("Admin page: http://localhost:" + port + "/admin");
+        System.out.println(adminPinConfigured ? "Admin PIN loaded from ADMIN_PIN." : "Temporary admin PIN is shown above.");
+    }
+
+    private static String resolveAdminPin() {
+        String configuredPin = System.getenv("ADMIN_PIN");
+
+        if (hasText(configuredPin)) {
+            adminPinConfigured = true;
+            return configuredPin.trim();
+        }
+
+        adminPinConfigured = false;
+        String generatedPin = String.format(Locale.US, "%06d", new SecureRandom().nextInt(1_000_000));
+        System.out.println("ADMIN_PIN environment variable is not set.");
+        System.out.println("Temporary admin PIN for this run: " + generatedPin);
+        return generatedPin;
     }
 
     private static int getPort(String[] args) {
@@ -774,7 +793,7 @@ public class Main {
             pin = parseQuery(exchange.getRequestURI().getRawQuery()).get("pin");
         }
 
-        if (!ADMIN_PIN.equals(pin)) {
+        if (!adminPin.equals(pin)) {
             throw new ApiException(401, "Invalid admin PIN.");
         }
     }
@@ -850,7 +869,9 @@ public class Main {
     }
 
     private static void serveStaticFile(HttpExchange exchange, String rawPath) throws IOException {
-        String cleanPath = rawPath.equals("/") ? "/index.html" : rawPath;
+        String cleanPath = rawPath.equals("/") || rawPath.equals("/admin") || rawPath.equals("/admin/")
+                ? "/index.html"
+                : rawPath;
         Path file = PUBLIC_DIR.resolve(cleanPath.substring(1)).normalize();
 
         if (!file.startsWith(PUBLIC_DIR) || Files.isDirectory(file) || !Files.exists(file)) {

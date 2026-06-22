@@ -4,8 +4,9 @@ const state = {
     cart: JSON.parse(localStorage.getItem("techkart-cart") || "[]"),
     search: "",
     category: "All",
-    activeView: "store",
+    activeView: window.location.pathname.replace(/\/$/, "") === "/admin" ? "admin" : "store",
     adminPin: sessionStorage.getItem("techkart-admin-pin") || "",
+    adminUnlocked: false,
     orders: [],
     lowStock: []
 };
@@ -201,6 +202,11 @@ function renderCart() {
 }
 
 function renderInventory() {
+    if (!state.adminUnlocked) {
+        els.inventoryTable.innerHTML = `<tr><td colspan="5">Enter the admin PIN to manage inventory.</td></tr>`;
+        return;
+    }
+
     if (state.products.length === 0) {
         els.inventoryTable.innerHTML = `<tr><td colspan="5">No products found.</td></tr>`;
         return;
@@ -432,8 +438,10 @@ async function loadAdminReports() {
     rememberPin();
 
     if (!state.adminPin) {
+        state.adminUnlocked = false;
         state.lowStock = [];
         state.orders = [];
+        renderInventory();
         renderLowStock();
         renderOrders();
         return;
@@ -448,11 +456,15 @@ async function loadAdminReports() {
 
         state.lowStock = lowStockData.products;
         state.orders = ordersData.orders;
+        state.adminUnlocked = true;
+        renderInventory();
         renderLowStock();
         renderOrders();
     } catch (error) {
+        state.adminUnlocked = false;
         state.lowStock = [];
         state.orders = [];
+        renderInventory();
         renderLowStock();
         renderOrders();
         showToast(error.message);
@@ -547,4 +559,11 @@ els.inventoryTable.addEventListener("click", event => {
 });
 
 els.pinInput.value = state.adminPin;
-loadStore().catch(error => showToast(error.message));
+setView(state.activeView);
+loadStore().then(() => {
+    if (state.activeView === "admin") {
+        return loadAdminReports();
+    }
+
+    return null;
+}).catch(error => showToast(error.message));
