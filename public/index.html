@@ -14,13 +14,12 @@
         </div>
         <div class="header-actions" role="group" aria-label="Main views">
             <button class="tab-button active" data-view="store" type="button">Store</button>
+            <button class="tab-button" data-view="customers" type="button">Customers</button>
             <button class="icon-button" id="refreshButton" type="button" title="Refresh data" aria-label="Refresh data">R</button>
         </div>
     </header>
 
     <main>
-        <section class="summary-grid" id="summaryGrid" aria-label="Store summary"></section>
-
         <section class="view active" id="storeView">
             <div class="store-layout">
                 <section class="catalog-panel" aria-labelledby="catalogTitle">
@@ -46,6 +45,10 @@
                         </div>
                         <button id="clearCartButton" class="ghost-button" type="button">Clear</button>
                     </div>
+                    <div class="checkout-customer">
+                        <div class="account-summary compact" id="checkoutAccountSummary"></div>
+                        <button id="openCustomersButton" class="ghost-button wide" type="button">Account</button>
+                    </div>
                     <div class="cart-list" id="cartList"></div>
                     <div class="cart-total">
                         <span>Total</span>
@@ -56,7 +59,96 @@
             </div>
         </section>
 
+        <section class="view" id="customersView">
+            <div class="customer-layout">
+                <section class="customer-panel" aria-labelledby="customerLoginTitle">
+                    <div class="panel-heading">
+                        <div>
+                            <p class="eyebrow">Account</p>
+                            <h2 id="customerLoginTitle">Login</h2>
+                        </div>
+                    </div>
+
+                    <form id="loginForm" class="customer-form single">
+                        <label>
+                            <span>Email</span>
+                            <input id="loginEmail" type="email" autocomplete="email" required>
+                        </label>
+                        <label>
+                            <span>Password</span>
+                            <input id="loginPassword" type="password" autocomplete="current-password" required>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">Login</button>
+                            <button id="logoutButton" class="ghost-button" type="button">Logout</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="customer-panel" aria-labelledby="customerRegistrationTitle">
+                    <div class="panel-heading">
+                        <div>
+                            <p class="eyebrow">Registration</p>
+                            <h2 id="customerRegistrationTitle">New Customer</h2>
+                        </div>
+                    </div>
+
+                    <form id="customerForm" class="customer-form">
+                        <label>
+                            <span>Name</span>
+                            <input id="customerName" type="text" autocomplete="name" required>
+                        </label>
+                        <label>
+                            <span>Email</span>
+                            <input id="customerEmail" type="email" autocomplete="email" required>
+                        </label>
+                        <label>
+                            <span>Password</span>
+                            <input id="customerPassword" type="password" autocomplete="new-password" required>
+                        </label>
+                        <label>
+                            <span>Confirm Password</span>
+                            <input id="customerConfirmPassword" type="password" autocomplete="new-password" required>
+                        </label>
+                        <label>
+                            <span>Phone</span>
+                            <input id="customerPhone" type="tel" autocomplete="tel">
+                        </label>
+                        <label class="wide-field">
+                            <span>Address</span>
+                            <textarea id="customerAddress" rows="4" autocomplete="street-address"></textarea>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary-button" type="submit">Register Customer</button>
+                        </div>
+                    </form>
+                </section>
+
+                <aside class="customer-panel account-panel" aria-labelledby="customerAccountTitle">
+                    <div class="panel-heading compact">
+                        <div>
+                            <p class="eyebrow">Profile</p>
+                            <h2 id="customerAccountTitle">My Account</h2>
+                        </div>
+                    </div>
+                    <div class="account-summary" id="accountSummary"></div>
+                </aside>
+
+                <aside class="customer-panel account-panel" aria-labelledby="customerOrdersTitle">
+                    <div class="panel-heading compact">
+                        <div>
+                            <p class="eyebrow">History</p>
+                            <h2 id="customerOrdersTitle">My Orders</h2>
+                        </div>
+                    </div>
+                    <div class="my-orders-list" id="myOrdersList"></div>
+                </aside>
+            </div>
+        </section>
+
         <section class="view" id="adminView">
+            <section class="summary-grid" id="summaryGrid" aria-label="Admin summary"></section>
+
             <div class="admin-layout">
                 <section class="admin-panel" aria-labelledby="adminProductTitle">
                     <div class="panel-heading">

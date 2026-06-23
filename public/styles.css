@@ -27,12 +27,23 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
     font: inherit;
 }
 
 button {
     cursor: pointer;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+[hidden] {
+    display: none !important;
 }
 
 .app-header {
@@ -136,16 +147,21 @@ main {
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(5, minmax(140px, 1fr));
+    grid-template-columns: repeat(6, minmax(140px, 1fr));
     gap: 12px;
     margin-bottom: 18px;
+}
+
+.summary-grid:empty {
+    display: none;
 }
 
 .summary-card,
 .catalog-panel,
 .cart-panel,
 .admin-panel,
-.admin-card {
+.admin-card,
+.customer-panel {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -189,7 +205,8 @@ main {
 .catalog-panel,
 .cart-panel,
 .admin-panel,
-.admin-card {
+.admin-card,
+.customer-panel {
     padding: 18px;
 }
 
@@ -208,7 +225,9 @@ main {
 .search-box,
 .pin-box,
 .limit-box,
-.product-form label {
+.customer-select-box,
+.product-form label,
+.customer-form label {
     display: grid;
     gap: 6px;
     color: var(--muted);
@@ -221,7 +240,9 @@ main {
     width: min(320px, 100%);
 }
 
-input {
+input,
+select,
+textarea {
     width: 100%;
     min-height: 40px;
     border: 1px solid var(--line);
@@ -231,7 +252,15 @@ input {
     color: var(--text);
 }
 
-input:focus {
+textarea {
+    min-height: 104px;
+    padding-block: 10px;
+    resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
     border-color: var(--accent);
     outline: 3px solid rgba(31, 122, 140, 0.14);
 }
@@ -351,6 +380,22 @@ input:focus {
     top: 92px;
 }
 
+.checkout-customer {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+}
+
+.account-summary.compact {
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfcfd;
+}
+
 .cart-list {
     display: grid;
     gap: 10px;
@@ -359,7 +404,8 @@ input:focus {
 
 .cart-item,
 .mini-item,
-.order-item {
+.order-item,
+.customer-item {
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 12px;
@@ -374,7 +420,8 @@ input:focus {
 
 .cart-item h3,
 .mini-item h3,
-.order-item h3 {
+.order-item h3,
+.customer-item h3 {
     margin: 0 0 6px;
     font-size: 14px;
 }
@@ -435,11 +482,36 @@ input:focus {
     align-items: start;
 }
 
+.customer-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
 .product-form {
     display: grid;
     grid-template-columns: repeat(4, minmax(120px, 1fr));
     gap: 12px;
     margin-bottom: 18px;
+}
+
+.customer-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+    gap: 12px;
+}
+
+.customer-form.single {
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+}
+
+.wide-field {
+    grid-column: 1 / -1;
+}
+
+.account-panel {
+    align-self: stretch;
 }
 
 .form-actions {
@@ -483,9 +555,29 @@ th {
 }
 
 .mini-list,
-.orders-list {
+.orders-list,
+.customer-list,
+.my-orders-list {
     display: grid;
     gap: 10px;
+}
+
+.customer-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+}
+
+.customer-item.active {
+    border-color: var(--accent);
+    background: #eef9fa;
+}
+
+.customer-item p {
+    margin: 8px 0 0;
+    color: var(--muted);
+    line-height: 1.4;
 }
 
 .toast {
@@ -515,7 +607,8 @@ th {
     }
 
     .store-layout,
-    .admin-layout {
+    .admin-layout,
+    .customer-layout {
         grid-template-columns: 1fr;
     }
 
@@ -543,12 +636,21 @@ th {
         grid-template-columns: repeat(2, minmax(120px, 1fr));
     }
 
-    .product-form {
+    .product-form,
+    .customer-form {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-form.single {
         grid-template-columns: 1fr;
     }
 
     .form-actions {
         align-items: stretch;
+    }
+
+    .customer-item {
+        grid-template-columns: 1fr;
     }
 }
 

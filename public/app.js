@@ -1,10 +1,15 @@
+const initialPath = window.location.pathname.replace(/\/$/, "");
+
 const state = {
     products: [],
     categories: [],
     cart: JSON.parse(localStorage.getItem("techkart-cart") || "[]"),
+    customer: JSON.parse(localStorage.getItem("techkart-customer") || "null"),
+    customerToken: localStorage.getItem("techkart-customer-token") || "",
+    customerOrders: [],
     search: "",
     category: "All",
-    activeView: window.location.pathname.replace(/\/$/, "") === "/admin" ? "admin" : "store",
+    activeView: initialPath === "/admin" ? "admin" : initialPath === "/customers" ? "customers" : "store",
     adminPin: sessionStorage.getItem("techkart-admin-pin") || "",
     adminUnlocked: false,
     orders: [],
@@ -20,7 +25,22 @@ const els = {
     cartTotal: document.querySelector("#cartTotal"),
     checkoutButton: document.querySelector("#checkoutButton"),
     clearCartButton: document.querySelector("#clearCartButton"),
+    checkoutAccountSummary: document.querySelector("#checkoutAccountSummary"),
+    openCustomersButton: document.querySelector("#openCustomersButton"),
     refreshButton: document.querySelector("#refreshButton"),
+    loginForm: document.querySelector("#loginForm"),
+    loginEmail: document.querySelector("#loginEmail"),
+    loginPassword: document.querySelector("#loginPassword"),
+    logoutButton: document.querySelector("#logoutButton"),
+    customerForm: document.querySelector("#customerForm"),
+    customerName: document.querySelector("#customerName"),
+    customerEmail: document.querySelector("#customerEmail"),
+    customerPassword: document.querySelector("#customerPassword"),
+    customerConfirmPassword: document.querySelector("#customerConfirmPassword"),
+    customerPhone: document.querySelector("#customerPhone"),
+    customerAddress: document.querySelector("#customerAddress"),
+    accountSummary: document.querySelector("#accountSummary"),
+    myOrdersList: document.querySelector("#myOrdersList"),
     pinInput: document.querySelector("#pinInput"),
     productForm: document.querySelector("#productForm"),
     productId: document.querySelector("#productId"),
@@ -55,6 +75,10 @@ async function api(path, options = {}) {
         headers.set("X-Admin-Pin", state.adminPin);
     }
 
+    if (state.customerToken) {
+        headers.set("X-Customer-Token", state.customerToken);
+    }
+
     const response = await fetch(path, { ...options, headers });
     const text = await response.text();
     const data = text ? JSON.parse(text) : {};
@@ -70,6 +94,23 @@ function saveCart() {
     localStorage.setItem("techkart-cart", JSON.stringify(state.cart));
 }
 
+function saveCustomerSession() {
+    if (state.customer && state.customerToken) {
+        localStorage.setItem("techkart-customer", JSON.stringify(state.customer));
+        localStorage.setItem("techkart-customer-token", state.customerToken);
+    } else {
+        localStorage.removeItem("techkart-customer");
+        localStorage.removeItem("techkart-customer-token");
+    }
+}
+
+function clearCustomerSession() {
+    state.customer = null;
+    state.customerToken = "";
+    state.customerOrders = [];
+    saveCustomerSession();
+}
+
 function showToast(message) {
     els.toast.textContent = message;
     els.toast.classList.add("show");
@@ -78,18 +119,18 @@ function showToast(message) {
 }
 
 async function loadStore() {
-    const [productsData, categoriesData, summaryData] = await Promise.all([
+    const [productsData, categoriesData] = await Promise.all([
         api("/api/products"),
-        api("/api/categories"),
-        api("/api/summary")
+        api("/api/categories")
     ]);
 
     state.products = productsData.products;
     state.categories = categoriesData.categories;
     reconcileCart();
-    renderSummary(summaryData);
     renderCategories();
     renderProducts();
+    renderAccount();
+    renderMyOrders();
     renderCart();
     renderInventory();
 }
@@ -100,6 +141,7 @@ function renderSummary(summary) {
         ["Categories", summary.categoryCount],
         ["Units", summary.totalStock],
         ["Low Stock", summary.lowStockCount],
+        ["Customers", summary.customerCount],
         ["Value", formatMoney(summary.inventoryValue)]
     ];
 
@@ -109,6 +151,10 @@ function renderSummary(summary) {
             <strong>${value}</strong>
         </article>
     `).join("");
+}
+
+function clearSummary() {
+    els.summaryGrid.innerHTML = "";
 }
 
 function renderCategories() {
@@ -172,6 +218,7 @@ function renderCart() {
         els.cartList.innerHTML = `<div class="empty-state">Cart is empty.</div>`;
         els.cartTotal.textContent = formatMoney(0);
         els.checkoutButton.disabled = true;
+        els.checkoutButton.textContent = "Place Order";
         return;
     }
 
@@ -198,7 +245,59 @@ function renderCart() {
     }).join("");
 
     els.cartTotal.textContent = formatMoney(total);
-    els.checkoutButton.disabled = false;
+    els.checkoutButton.disabled = !state.customer;
+    els.checkoutButton.textContent = state.customer ? "Place Order" : "Login to Order";
+}
+
+function renderAccount() {
+    els.logoutButton.hidden = !state.customer;
+
+    if (!state.customer) {
+        els.checkoutAccountSummary.innerHTML = `<div class="muted">Not logged in</div>`;
+        els.accountSummary.innerHTML = `<div class="empty-state">Not logged in.</div>`;
+        return;
+    }
+
+    const phone = state.customer.phone ? `<div class="muted">${escapeHtml(state.customer.phone)}</div>` : "";
+    const address = state.customer.address ? `<p>${escapeHtml(state.customer.address)}</p>` : "";
+
+    els.checkoutAccountSummary.innerHTML = `
+        <div>
+            <strong>${escapeHtml(state.customer.name)}</strong>
+            <div class="muted">${escapeHtml(state.customer.email)}</div>
+        </div>
+    `;
+    els.accountSummary.innerHTML = `
+        <article class="customer-item active">
+            <div>
+                <h3>${escapeHtml(state.customer.name)}</h3>
+                <div class="muted">${escapeHtml(state.customer.email)}</div>
+                ${phone}
+                ${address}
+            </div>
+        </article>
+    `;
+}
+
+function renderMyOrders() {
+    if (!state.customer) {
+        els.myOrdersList.innerHTML = `<div class="empty-state">Not logged in.</div>`;
+        return;
+    }
+
+    if (!state.customerOrders.length) {
+        els.myOrdersList.innerHTML = `<div class="empty-state">No orders yet.</div>`;
+        return;
+    }
+
+    els.myOrdersList.innerHTML = state.customerOrders.map(order => `
+        <article class="order-item">
+            <h3>Order #${order.orderId}</h3>
+            <div class="muted">${escapeHtml(order.dateTime)} | ${escapeHtml(order.status)}</div>
+            <p>${escapeHtml(order.details)}</p>
+            <strong>${formatMoney(order.totalAmount)}</strong>
+        </article>
+    `).join("");
 }
 
 function renderInventory() {
@@ -252,6 +351,7 @@ function renderOrders() {
         <article class="order-item">
             <h3>Order #${order.orderId}</h3>
             <div class="muted">${escapeHtml(order.dateTime)} | ${escapeHtml(order.status)}</div>
+            <div class="muted">${escapeHtml(order.customerName || "Guest")}</div>
             <p>${escapeHtml(order.details)}</p>
             <strong>${formatMoney(order.totalAmount)}</strong>
         </article>
@@ -346,8 +446,129 @@ function reconcileCart() {
     saveCart();
 }
 
+function applyCustomerSession(result) {
+    state.customer = result.customer;
+    state.customerToken = result.token;
+    saveCustomerSession();
+    renderAccount();
+    renderCart();
+}
+
+async function loadCustomerSession() {
+    if (!state.customerToken) {
+        clearCustomerSession();
+        renderAccount();
+        renderMyOrders();
+        renderCart();
+        return;
+    }
+
+    try {
+        const [customerData, ordersData] = await Promise.all([
+            api("/api/customers/me"),
+            api("/api/customers/me/orders")
+        ]);
+
+        state.customer = customerData.customer;
+        state.customerOrders = ordersData.orders;
+        saveCustomerSession();
+    } catch (error) {
+        clearCustomerSession();
+        showToast(error.message);
+    }
+
+    renderAccount();
+    renderMyOrders();
+    renderCart();
+}
+
+async function loadCustomerOrders() {
+    if (!state.customerToken) {
+        state.customerOrders = [];
+        renderMyOrders();
+        return;
+    }
+
+    try {
+        const ordersData = await api("/api/customers/me/orders");
+        state.customerOrders = ordersData.orders;
+    } catch (error) {
+        clearCustomerSession();
+        showToast(error.message);
+    }
+
+    renderMyOrders();
+}
+
+async function loginCustomer(event) {
+    event.preventDefault();
+
+    const body = new URLSearchParams({
+        email: els.loginEmail.value,
+        password: els.loginPassword.value
+    });
+
+    try {
+        const result = await api("/api/customers/login", { method: "POST", body });
+        applyCustomerSession(result);
+        els.loginForm.reset();
+        await loadCustomerOrders();
+        showToast(`Welcome back, ${result.customer.name}.`);
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
+async function registerCustomer(event) {
+    event.preventDefault();
+
+    if (els.customerPassword.value !== els.customerConfirmPassword.value) {
+        showToast("Passwords do not match.");
+        return;
+    }
+
+    const body = new URLSearchParams({
+        name: els.customerName.value,
+        email: els.customerEmail.value,
+        password: els.customerPassword.value,
+        phone: els.customerPhone.value,
+        address: els.customerAddress.value
+    });
+
+    try {
+        const result = await api("/api/customers", { method: "POST", body });
+        applyCustomerSession(result);
+        els.customerForm.reset();
+        await loadCustomerOrders();
+        await loadStore();
+        showToast(`${result.customer.name} registered.`);
+    } catch (error) {
+        showToast(error.message);
+    }
+}
+
+async function logoutCustomer() {
+    try {
+        await api("/api/customers/logout", { method: "POST" });
+    } catch (error) {
+        showToast(error.message);
+    }
+
+    clearCustomerSession();
+    renderAccount();
+    renderMyOrders();
+    renderCart();
+    showToast("Logged out.");
+}
+
 async function checkout() {
     if (!state.cart.length) {
+        return;
+    }
+
+    if (!state.customer) {
+        setView("customers");
+        showToast("Login or register first.");
         return;
     }
 
@@ -360,6 +581,7 @@ async function checkout() {
         state.cart = [];
         saveCart();
         await loadStore();
+        await loadCustomerOrders();
         showToast(`Order #${result.order.orderId} placed.`);
     } catch (error) {
         showToast(error.message);
@@ -441,6 +663,7 @@ async function loadAdminReports() {
         state.adminUnlocked = false;
         state.lowStock = [];
         state.orders = [];
+        clearSummary();
         renderInventory();
         renderLowStock();
         renderOrders();
@@ -449,7 +672,8 @@ async function loadAdminReports() {
 
     try {
         const limit = els.lowStockLimit.value || "5";
-        const [lowStockData, ordersData] = await Promise.all([
+        const [summaryData, lowStockData, ordersData] = await Promise.all([
+            api("/api/summary"),
             api(`/api/reports/low-stock?limit=${encodeURIComponent(limit)}`),
             api("/api/orders")
         ]);
@@ -457,6 +681,7 @@ async function loadAdminReports() {
         state.lowStock = lowStockData.products;
         state.orders = ordersData.orders;
         state.adminUnlocked = true;
+        renderSummary(summaryData);
         renderInventory();
         renderLowStock();
         renderOrders();
@@ -464,6 +689,7 @@ async function loadAdminReports() {
         state.adminUnlocked = false;
         state.lowStock = [];
         state.orders = [];
+        clearSummary();
         renderInventory();
         renderLowStock();
         renderOrders();
@@ -539,9 +765,15 @@ els.clearCartButton.addEventListener("click", () => {
     renderCart();
 });
 
+els.openCustomersButton.addEventListener("click", () => setView("customers"));
+els.loginForm.addEventListener("submit", loginCustomer);
+els.customerForm.addEventListener("submit", registerCustomer);
+els.logoutButton.addEventListener("click", logoutCustomer);
+
 els.checkoutButton.addEventListener("click", checkout);
 els.refreshButton.addEventListener("click", () => {
     loadStore();
+    loadCustomerSession();
     loadAdminReports();
 });
 els.productForm.addEventListener("submit", saveProduct);
@@ -560,7 +792,7 @@ els.inventoryTable.addEventListener("click", event => {
 
 els.pinInput.value = state.adminPin;
 setView(state.activeView);
-loadStore().then(() => {
+loadStore().then(() => loadCustomerSession()).then(() => {
     if (state.activeView === "admin") {
         return loadAdminReports();
     }

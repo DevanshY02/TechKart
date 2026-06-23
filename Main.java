@@ -10,16 +10,20 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.Executors;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 
 class Product {
     private final int id;
@@ -113,27 +117,138 @@ class Product {
     }
 }
 
+class Customer {
+    private final int id;
+    private final String name;
+    private final String email;
+    private final String phone;
+    private final String address;
+    private final String createdAt;
+    private final String passwordSalt;
+    private final String passwordHash;
+
+    public Customer(int id, String name, String email, String phone, String address, String createdAt) {
+        this(id, name, email, phone, address, createdAt, "", "");
+    }
+
+    public Customer(int id, String name, String email, String phone, String address, String createdAt, String passwordSalt, String passwordHash) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.address = address;
+        this.createdAt = createdAt;
+        this.passwordSalt = passwordSalt;
+        this.passwordHash = passwordHash;
+    }
+
+    public String toFileString() {
+        return id + "|"
+                + clean(name) + "|"
+                + clean(email) + "|"
+                + clean(phone) + "|"
+                + clean(address) + "|"
+                + clean(createdAt) + "|"
+                + clean(passwordSalt) + "|"
+                + clean(passwordHash);
+    }
+
+    public static Customer fromFileString(String line) {
+        String[] parts = line.split("\\|", -1);
+
+        if (parts.length < 6) {
+            throw new IllegalArgumentException("Invalid customer row: " + line);
+        }
+
+        int id = Integer.parseInt(parts[0]);
+        String name = parts[1];
+        String email = parts[2];
+        String phone = parts[3];
+        String address = parts[4];
+        String createdAt = parts[5];
+        String passwordSalt = parts.length >= 8 ? parts[6] : "";
+        String passwordHash = parts.length >= 8 ? parts[7] : "";
+
+        return new Customer(id, name, email, phone, address, createdAt, passwordSalt, passwordHash);
+    }
+
+    public String toJson() {
+        return String.format(
+                Locale.US,
+                "{\"id\":%d,\"name\":\"%s\",\"email\":\"%s\",\"phone\":\"%s\",\"address\":\"%s\",\"createdAt\":\"%s\"}",
+                id,
+                Main.escapeJson(name),
+                Main.escapeJson(email),
+                Main.escapeJson(phone),
+                Main.escapeJson(address),
+                Main.escapeJson(createdAt)
+        );
+    }
+
+    private static String clean(String value) {
+        return value == null ? "" : value.replace("|", " ").trim();
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getPasswordSalt() {
+        return passwordSalt;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public boolean hasPassword() {
+        return !passwordSalt.isBlank() && !passwordHash.isBlank();
+    }
+}
+
 class Order {
     private final int orderId;
     private final String dateTime;
     private final double totalAmount;
     private final String status;
+    private final int customerId;
+    private final String customerName;
     private final String details;
 
     public Order(int orderId, String dateTime, double totalAmount, String status, String details) {
+        this(orderId, dateTime, totalAmount, status, 0, "Guest", details);
+    }
+
+    public Order(int orderId, String dateTime, double totalAmount, String status, int customerId, String customerName, String details) {
         this.orderId = orderId;
         this.dateTime = dateTime;
         this.totalAmount = totalAmount;
         this.status = status;
+        this.customerId = customerId;
+        this.customerName = customerName;
         this.details = details;
     }
 
     public String toFileString() {
-        return orderId + "|" + dateTime + "|" + totalAmount + "|" + status + "|" + details.replace("|", " ");
+        return orderId + "|"
+                + dateTime + "|"
+                + totalAmount + "|"
+                + status + "|"
+                + customerId + "|"
+                + customerName.replace("|", " ") + "|"
+                + details.replace("|", " ");
     }
 
     public static Order fromFileString(String line) {
-        String[] parts = line.split("\\|", 5);
+        String[] parts = line.split("\\|", 7);
 
         if (parts.length < 5) {
             throw new IllegalArgumentException("Invalid order row: " + line);
@@ -143,25 +258,39 @@ class Order {
         String dateTime = parts[1];
         double totalAmount = Double.parseDouble(parts[2]);
         String status = parts[3];
-        String details = parts[4];
 
+        if (parts.length >= 7) {
+            int customerId = Integer.parseInt(parts[4]);
+            String customerName = parts[5];
+            String details = parts[6];
+
+            return new Order(orderId, dateTime, totalAmount, status, customerId, customerName, details);
+        }
+
+        String details = parts[4];
         return new Order(orderId, dateTime, totalAmount, status, details);
     }
 
     public String toJson() {
         return String.format(
                 Locale.US,
-                "{\"orderId\":%d,\"dateTime\":\"%s\",\"totalAmount\":%.2f,\"status\":\"%s\",\"details\":\"%s\"}",
+                "{\"orderId\":%d,\"dateTime\":\"%s\",\"totalAmount\":%.2f,\"status\":\"%s\",\"customerId\":%d,\"customerName\":\"%s\",\"details\":\"%s\"}",
                 orderId,
                 Main.escapeJson(dateTime),
                 totalAmount,
                 Main.escapeJson(status),
+                customerId,
+                Main.escapeJson(customerName),
                 Main.escapeJson(details)
         );
     }
 
     public int getOrderId() {
         return orderId;
+    }
+
+    public int getCustomerId() {
+        return customerId;
     }
 
     public double getTotalAmount() {
@@ -203,20 +332,28 @@ class ApiException extends RuntimeException {
 public class Main {
     private static final Path PRODUCTS_FILE = Paths.get("products.txt");
     private static final Path ORDERS_FILE = Paths.get("orders.txt");
+    private static final Path CUSTOMERS_FILE = Paths.get("customers.txt");
     private static final Path PUBLIC_DIR = Paths.get("public").toAbsolutePath().normalize();
     private static final DateTimeFormatter ORDER_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final int PASSWORD_MIN_LENGTH = 6;
+    private static final int PASSWORD_ITERATIONS = 120_000;
+    private static final int PASSWORD_KEY_LENGTH = 256;
     private static final Object STORE_LOCK = new Object();
 
     private static final ArrayList<Product> products = new ArrayList<>();
     private static final ArrayList<Order> orders = new ArrayList<>();
+    private static final ArrayList<Customer> customers = new ArrayList<>();
+    private static final LinkedHashMap<String, Integer> customerSessions = new LinkedHashMap<>();
     private static int nextProductId = 1;
     private static int nextOrderId = 1001;
+    private static int nextCustomerId = 1;
     private static String adminPin;
     private static boolean adminPinConfigured;
 
     public static void main(String[] args) throws IOException {
         adminPin = resolveAdminPin();
         loadProductsFromFile();
+        loadCustomersFromFile();
         loadOrdersFromFile();
 
         int port = getPort(args);
@@ -289,7 +426,7 @@ public class Main {
         Headers headers = exchange.getResponseHeaders();
         headers.set("Access-Control-Allow-Origin", "*");
         headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-        headers.set("Access-Control-Allow-Headers", "Content-Type,X-Admin-Pin");
+        headers.set("Access-Control-Allow-Headers", "Content-Type,X-Admin-Pin,X-Customer-Token");
         headers.set("Cache-Control", "no-store");
     }
 
@@ -302,6 +439,7 @@ public class Main {
         }
 
         if (path.equals("/api/summary") && method.equals("GET")) {
+            requireAdmin(exchange, Map.of());
             sendJson(exchange, 200, buildSummaryJson());
             return;
         }
@@ -334,6 +472,41 @@ public class Main {
 
         if (path.equals("/api/categories") && method.equals("GET")) {
             sendJson(exchange, 200, buildCategoriesJson());
+            return;
+        }
+
+        if (path.equals("/api/customers")) {
+            if (method.equals("GET")) {
+                requireAdmin(exchange, Map.of());
+                sendJson(exchange, 200, buildCustomersJson());
+                return;
+            }
+
+            if (method.equals("POST")) {
+                sendJson(exchange, 201, registerCustomer(exchange));
+                return;
+            }
+        }
+
+        if (path.equals("/api/customers/login") && method.equals("POST")) {
+            sendJson(exchange, 200, loginCustomer(exchange));
+            return;
+        }
+
+        if (path.equals("/api/customers/logout") && method.equals("POST")) {
+            sendJson(exchange, 200, logoutCustomer(exchange));
+            return;
+        }
+
+        if (path.equals("/api/customers/me") && method.equals("GET")) {
+            Customer customer = requireCustomer(exchange, Map.of());
+            sendJson(exchange, 200, "{\"customer\":" + customer.toJson() + "}");
+            return;
+        }
+
+        if (path.equals("/api/customers/me/orders") && method.equals("GET")) {
+            Customer customer = requireCustomer(exchange, Map.of());
+            sendJson(exchange, 200, buildCustomerOrdersJson(customer.getId()));
             return;
         }
 
@@ -431,6 +604,23 @@ public class Main {
         return json.toString();
     }
 
+    private static String buildCustomersJson() {
+        StringBuilder json = new StringBuilder("{\"customers\":[");
+
+        synchronized (STORE_LOCK) {
+            for (int i = 0; i < customers.size(); i++) {
+                if (i > 0) {
+                    json.append(",");
+                }
+
+                json.append(customers.get(i).toJson());
+            }
+        }
+
+        json.append("]}");
+        return json.toString();
+    }
+
     private static String buildOrdersJson() {
         StringBuilder json = new StringBuilder("{\"orders\":[");
 
@@ -441,6 +631,31 @@ public class Main {
                 }
 
                 json.append(orders.get(i).toJson());
+            }
+        }
+
+        json.append("]}");
+        return json.toString();
+    }
+
+    private static String buildCustomerOrdersJson(int customerId) {
+        StringBuilder json = new StringBuilder("{\"orders\":[");
+        int count = 0;
+
+        synchronized (STORE_LOCK) {
+            for (int i = orders.size() - 1; i >= 0; i--) {
+                Order order = orders.get(i);
+
+                if (order.getCustomerId() != customerId) {
+                    continue;
+                }
+
+                if (count > 0) {
+                    json.append(",");
+                }
+
+                json.append(order.toJson());
+                count++;
             }
         }
 
@@ -495,11 +710,12 @@ public class Main {
 
             return String.format(
                     Locale.US,
-                    "{\"productCount\":%d,\"categoryCount\":%d,\"totalStock\":%d,\"lowStockCount\":%d,\"orderCount\":%d,\"inventoryValue\":%.2f}",
+                    "{\"productCount\":%d,\"categoryCount\":%d,\"totalStock\":%d,\"lowStockCount\":%d,\"customerCount\":%d,\"orderCount\":%d,\"inventoryValue\":%.2f}",
                     productCount,
                     categories.size(),
                     totalStock,
                     lowStockCount,
+                    customers.size(),
                     orders.size(),
                     inventoryValue
             );
@@ -533,6 +749,68 @@ public class Main {
         }
 
         return "{\"message\":\"Product added.\",\"product\":" + product.toJson() + "}";
+    }
+
+    private static String registerCustomer(HttpExchange exchange) throws IOException {
+        Map<String, String> form = readForm(exchange);
+        String name = requireText(form, "name");
+        String email = requireText(form, "email").toLowerCase(Locale.ROOT);
+        String password = requirePassword(form.get("password"));
+        String phone = form.getOrDefault("phone", "").trim();
+        String address = form.getOrDefault("address", "").trim();
+
+        if (!email.contains("@") || !email.contains(".")) {
+            throw new ApiException(400, "Email must be valid.");
+        }
+
+        Customer customer;
+
+        synchronized (STORE_LOCK) {
+            if (findCustomerByEmail(email) != null) {
+                throw new ApiException(409, "A customer with this email is already registered.");
+            }
+
+            String createdAt = LocalDateTime.now().format(ORDER_DATE_FORMAT);
+            String salt = generateSecureToken(16);
+            String passwordHash = hashPassword(password, salt);
+            customer = new Customer(nextCustomerId, name, email, phone, address, createdAt, salt, passwordHash);
+            customers.add(customer);
+            nextCustomerId++;
+            saveCustomersToFile();
+            String token = createCustomerSession(customer.getId());
+
+            return buildCustomerAuthJson("Customer registered.", customer, token);
+        }
+    }
+
+    private static String loginCustomer(HttpExchange exchange) throws IOException {
+        Map<String, String> form = readForm(exchange);
+        String email = requireText(form, "email").toLowerCase(Locale.ROOT);
+        String password = requireText(form, "password");
+
+        synchronized (STORE_LOCK) {
+            Customer customer = findCustomerByEmail(email);
+
+            if (customer == null || !customer.hasPassword() || !passwordMatches(customer, password)) {
+                throw new ApiException(401, "Invalid email or password.");
+            }
+
+            String token = createCustomerSession(customer.getId());
+            return buildCustomerAuthJson("Login successful.", customer, token);
+        }
+    }
+
+    private static String logoutCustomer(HttpExchange exchange) throws IOException {
+        Map<String, String> form = readForm(exchange);
+        String token = getCustomerToken(exchange, form);
+
+        if (hasText(token)) {
+            synchronized (STORE_LOCK) {
+                customerSessions.remove(token);
+            }
+        }
+
+        return "{\"message\":\"Logged out.\"}";
     }
 
     private static String updateProduct(HttpExchange exchange, int productId) throws IOException {
@@ -599,6 +877,7 @@ public class Main {
     private static String checkout(HttpExchange exchange) throws IOException {
         Map<String, String> form = readForm(exchange);
         List<CartRequestItem> requestedItems = parseCartItems(form.get("items"));
+        Customer customer = requireCustomer(exchange, form);
 
         synchronized (STORE_LOCK) {
             if (requestedItems.isEmpty()) {
@@ -639,7 +918,7 @@ public class Main {
             }
 
             String dateTime = LocalDateTime.now().format(ORDER_DATE_FORMAT);
-            Order order = new Order(nextOrderId, dateTime, total, "PLACED", details.toString());
+            Order order = new Order(nextOrderId, dateTime, total, "PLACED", customer.getId(), customer.getName(), details.toString());
             orders.add(order);
             nextOrderId++;
 
@@ -688,6 +967,26 @@ public class Main {
         return null;
     }
 
+    private static Customer findCustomerById(int id) {
+        for (Customer customer : customers) {
+            if (customer.getId() == id) {
+                return customer;
+            }
+        }
+
+        return null;
+    }
+
+    private static Customer findCustomerByEmail(String email) {
+        for (Customer customer : customers) {
+            if (customer.getEmail().equalsIgnoreCase(email)) {
+                return customer;
+            }
+        }
+
+        return null;
+    }
+
     private static void loadProductsFromFile() {
         synchronized (STORE_LOCK) {
             products.clear();
@@ -729,6 +1028,46 @@ public class Main {
             }
         } catch (Exception e) {
             throw new ApiException(500, "Could not save products: " + e.getMessage());
+        }
+    }
+
+    private static void loadCustomersFromFile() {
+        synchronized (STORE_LOCK) {
+            customers.clear();
+
+            if (!Files.exists(CUSTOMERS_FILE)) {
+                return;
+            }
+
+            int maxCustomerId = 0;
+
+            try (BufferedReader reader = Files.newBufferedReader(CUSTOMERS_FILE, StandardCharsets.UTF_8)) {
+                String line;
+
+                while ((line = reader.readLine()) != null) {
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+
+                    Customer customer = Customer.fromFileString(line);
+                    customers.add(customer);
+                    maxCustomerId = Math.max(maxCustomerId, customer.getId());
+                }
+
+                nextCustomerId = maxCustomerId + 1;
+            } catch (Exception e) {
+                System.out.println("Error loading customers: " + e.getMessage());
+            }
+        }
+    }
+
+    private static void saveCustomersToFile() {
+        try (PrintWriter writer = new PrintWriter(Files.newBufferedWriter(CUSTOMERS_FILE, StandardCharsets.UTF_8))) {
+            for (Customer customer : customers) {
+                writer.println(customer.toFileString());
+            }
+        } catch (Exception e) {
+            throw new ApiException(500, "Could not save customers: " + e.getMessage());
         }
     }
 
@@ -796,6 +1135,89 @@ public class Main {
         if (!adminPin.equals(pin)) {
             throw new ApiException(401, "Invalid admin PIN.");
         }
+    }
+
+    private static Customer requireCustomer(HttpExchange exchange, Map<String, String> form) {
+        String token = getCustomerToken(exchange, form);
+
+        if (!hasText(token)) {
+            throw new ApiException(401, "Please log in before checkout.");
+        }
+
+        synchronized (STORE_LOCK) {
+            Integer customerId = customerSessions.get(token);
+
+            if (customerId == null) {
+                throw new ApiException(401, "Session expired. Please log in again.");
+            }
+
+            Customer customer = findCustomerById(customerId);
+
+            if (customer == null) {
+                customerSessions.remove(token);
+                throw new ApiException(401, "Session expired. Please log in again.");
+            }
+
+            return customer;
+        }
+    }
+
+    private static String getCustomerToken(HttpExchange exchange, Map<String, String> form) {
+        String token = exchange.getRequestHeaders().getFirst("X-Customer-Token");
+
+        if (!hasText(token)) {
+            token = form.get("customerToken");
+        }
+
+        if (!hasText(token)) {
+            token = parseQuery(exchange.getRequestURI().getRawQuery()).get("customerToken");
+        }
+
+        return token;
+    }
+
+    private static String createCustomerSession(int customerId) {
+        String token = generateSecureToken(32);
+        customerSessions.put(token, customerId);
+        return token;
+    }
+
+    private static String buildCustomerAuthJson(String message, Customer customer, String token) {
+        return "{\"message\":\"" + escapeJson(message) + "\",\"token\":\"" + escapeJson(token) + "\",\"customer\":" + customer.toJson() + "}";
+    }
+
+    private static String requirePassword(String password) {
+        String value = requireText(Map.of("password", password == null ? "" : password), "password");
+
+        if (value.length() < PASSWORD_MIN_LENGTH) {
+            throw new ApiException(400, "Password must be at least " + PASSWORD_MIN_LENGTH + " characters.");
+        }
+
+        return value;
+    }
+
+    private static boolean passwordMatches(Customer customer, String password) {
+        String candidateHash = hashPassword(password, customer.getPasswordSalt());
+        return MessageDigest.isEqual(
+                candidateHash.getBytes(StandardCharsets.UTF_8),
+                customer.getPasswordHash().getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private static String hashPassword(String password, String salt) {
+        try {
+            PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(StandardCharsets.UTF_8), PASSWORD_ITERATIONS, PASSWORD_KEY_LENGTH);
+            byte[] hash = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).getEncoded();
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            throw new ApiException(500, "Could not process password.");
+        }
+    }
+
+    private static String generateSecureToken(int byteCount) {
+        byte[] bytes = new byte[byteCount];
+        new SecureRandom().nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private static String requireText(Map<String, String> form, String fieldName) {
@@ -869,7 +1291,11 @@ public class Main {
     }
 
     private static void serveStaticFile(HttpExchange exchange, String rawPath) throws IOException {
-        String cleanPath = rawPath.equals("/") || rawPath.equals("/admin") || rawPath.equals("/admin/")
+        String cleanPath = rawPath.equals("/")
+                || rawPath.equals("/admin")
+                || rawPath.equals("/admin/")
+                || rawPath.equals("/customers")
+                || rawPath.equals("/customers/")
                 ? "/index.html"
                 : rawPath;
         Path file = PUBLIC_DIR.resolve(cleanPath.substring(1)).normalize();
