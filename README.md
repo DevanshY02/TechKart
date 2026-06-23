@@ -7,9 +7,11 @@ TechKart is a simple dynamic PC parts store built with a Java backend and a brow
 - Product catalog with search and category filters
 - Cart with quantity controls and checkout
 - Order history saved to a text file
+- Customer registration, login, and customer order history
 - Admin product add, edit, delete, and stock updates
+- Product images with editable image URLs
 - Low-stock report
-- Lightweight file-based persistence using `products.txt` and `orders.txt`
+- Lightweight file-based persistence using `products.txt`, `customers.txt`, and `orders.txt`
 - No Maven, npm, or database setup required
 
 ## Tech Stack
@@ -26,6 +28,7 @@ TechKart/
 ├── products.txt
 ├── orders.txt
 ├── public/
+│   ├── assets/
 │   ├── index.html
 │   ├── styles.css
 │   └── app.js
@@ -80,6 +83,29 @@ https://techkart.onrender.com
 
 The app reads the `PORT` environment variable automatically, so it can run on hosted platforms instead of only `localhost`.
 
+### Persistent Admin Changes On Render
+
+Admin edits are saved to text files. A normal Render deploy rebuilds the app container, so runtime edits can reset unless those text files live on persistent storage.
+
+To preserve admin changes across deploys/restarts:
+
+1. Attach a Render persistent disk to the service.
+2. Mount it at a path such as:
+
+```text
+/var/data
+```
+
+3. Add this environment variable:
+
+```text
+DATA_DIR=/var/data
+```
+
+On first startup with an empty `DATA_DIR`, TechKart seeds the disk with `products.txt` and `orders.txt`. After that, admin changes are saved in the disk files and are not overwritten by future code updates.
+
+Without a persistent disk or database, Render free-plan runtime file changes can still reset after deploys.
+
 ## Admin Access
 
 The public store page does not show the Admin tab. Open the admin page directly:
@@ -102,18 +128,25 @@ If `ADMIN_PIN` is not configured, the server generates a temporary PIN at startu
 
 - `GET /api/products`
 - `GET /api/categories`
-- `GET /api/summary`
+- `GET /api/summary` admin only
+- `POST /api/customers`
+- `POST /api/customers/login`
+- `POST /api/customers/logout`
+- `GET /api/customers/me`
+- `GET /api/customers/me/orders`
 - `POST /api/orders`
-- `GET /api/orders`
-- `POST /api/products`
-- `PUT /api/products/{id}`
-- `DELETE /api/products/{id}`
-- `GET /api/reports/low-stock`
+- `GET /api/orders` admin only
+- `POST /api/products` admin only
+- `PUT /api/products/{id}` admin only
+- `DELETE /api/products/{id}` admin only
+- `GET /api/reports/low-stock` admin only
 
 Admin-only endpoints require the `X-Admin-Pin` header or a `pin` value. Keep this PIN out of GitHub.
+
+Customer session endpoints use the `X-Customer-Token` header after registration or login.
 
 ## Notes
 
 This is a learning/demo project. The admin PIN is a basic shared secret, so replace it with real user authentication before using this in production.
 
-Product and order changes are saved to local text files. On many free hosting services, those runtime file changes can reset after a redeploy or restart. Use a database or persistent disk if you need permanent hosted data.
+Product, customer, and order changes are saved to local text files. Set `DATA_DIR` to a persistent disk path in hosted environments if you need permanent data.

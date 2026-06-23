@@ -346,9 +346,10 @@ class ApiException extends RuntimeException {
 }
 
 public class Main {
-    private static final Path PRODUCTS_FILE = Paths.get("products.txt");
-    private static final Path ORDERS_FILE = Paths.get("orders.txt");
-    private static final Path CUSTOMERS_FILE = Paths.get("customers.txt");
+    private static final Path DATA_DIR = resolveDataDir();
+    private static final Path PRODUCTS_FILE = DATA_DIR.resolve("products.txt");
+    private static final Path ORDERS_FILE = DATA_DIR.resolve("orders.txt");
+    private static final Path CUSTOMERS_FILE = DATA_DIR.resolve("customers.txt");
     private static final Path PUBLIC_DIR = Paths.get("public").toAbsolutePath().normalize();
     private static final DateTimeFormatter ORDER_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int PASSWORD_MIN_LENGTH = 6;
@@ -368,6 +369,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         adminPin = resolveAdminPin();
+        prepareDataDirectory();
         loadProductsFromFile();
         loadCustomersFromFile();
         loadOrdersFromFile();
@@ -380,7 +382,31 @@ public class Main {
 
         System.out.println("TechKart is running at http://localhost:" + port);
         System.out.println("Admin page: http://localhost:" + port + "/admin");
+        System.out.println("Data directory: " + DATA_DIR);
         System.out.println(adminPinConfigured ? "Admin PIN loaded from ADMIN_PIN." : "Temporary admin PIN is shown above.");
+    }
+
+    private static Path resolveDataDir() {
+        String configuredDir = System.getenv("DATA_DIR");
+        Path dir = hasText(configuredDir) ? Paths.get(configuredDir.trim()) : Paths.get(".");
+        return dir.toAbsolutePath().normalize();
+    }
+
+    private static void prepareDataDirectory() throws IOException {
+        Files.createDirectories(DATA_DIR);
+        seedDataFile("products.txt", PRODUCTS_FILE);
+        seedDataFile("orders.txt", ORDERS_FILE);
+        seedDataFile("customers.txt", CUSTOMERS_FILE);
+    }
+
+    private static void seedDataFile(String seedFileName, Path targetFile) throws IOException {
+        Path seedFile = Paths.get(seedFileName).toAbsolutePath().normalize();
+
+        if (seedFile.equals(targetFile.toAbsolutePath().normalize()) || Files.exists(targetFile) || !Files.exists(seedFile)) {
+            return;
+        }
+
+        Files.copy(seedFile, targetFile);
     }
 
     private static String resolveAdminPin() {
