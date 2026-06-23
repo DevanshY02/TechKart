@@ -297,12 +297,24 @@ textarea:focus {
     display: grid;
     place-items: center;
     min-height: 116px;
+    padding: 10px;
     background:
         linear-gradient(135deg, rgba(31, 122, 140, 0.16), rgba(47, 104, 181, 0.12)),
         repeating-linear-gradient(90deg, rgba(24, 34, 45, 0.06) 0 1px, transparent 1px 14px);
     color: var(--accent-dark);
     font-size: 28px;
     font-weight: 800;
+}
+
+.product-media.has-image {
+    background: #f8fafc;
+}
+
+.product-media img {
+    width: 100%;
+    height: 96px;
+    object-fit: contain;
+    display: block;
 }
 
 .product-media[data-category="GPU"] {

@@ -48,6 +48,7 @@ const els = {
     productCategory: document.querySelector("#productCategory"),
     productPrice: document.querySelector("#productPrice"),
     productStock: document.querySelector("#productStock"),
+    productImageUrl: document.querySelector("#productImageUrl"),
     saveProductButton: document.querySelector("#saveProductButton"),
     cancelEditButton: document.querySelector("#cancelEditButton"),
     inventoryTable: document.querySelector("#inventoryTable"),
@@ -191,7 +192,7 @@ function renderProducts() {
 
         return `
             <article class="product-card">
-                <div class="product-media" data-category="${escapeHtml(product.category)}">${categoryMark(product.category)}</div>
+                ${productMedia(product)}
                 <div class="product-info">
                     <h3>${escapeHtml(product.name)}</h3>
                     <div class="product-meta">
@@ -207,6 +208,20 @@ function renderProducts() {
             </article>
         `;
     }).join("");
+}
+
+function productMedia(product) {
+    const fallback = categoryMark(product.category);
+
+    if (!product.imageUrl) {
+        return `<div class="product-media" data-category="${escapeHtml(product.category)}" data-fallback="${escapeHtml(fallback)}">${escapeHtml(fallback)}</div>`;
+    }
+
+    return `
+        <div class="product-media has-image" data-category="${escapeHtml(product.category)}" data-fallback="${escapeHtml(fallback)}">
+            <img src="${escapeHtml(product.imageUrl)}" alt="${escapeHtml(product.name)}" loading="lazy">
+        </div>
+    `;
 }
 
 function renderCart() {
@@ -597,7 +612,8 @@ async function saveProduct(event) {
         name: els.productName.value,
         category: els.productCategory.value,
         price: els.productPrice.value,
-        stock: els.productStock.value
+        stock: els.productStock.value,
+        imageUrl: els.productImageUrl.value
     });
 
     const editingId = els.productId.value;
@@ -627,6 +643,7 @@ function editProduct(productId) {
     els.productCategory.value = product.category;
     els.productPrice.value = product.price;
     els.productStock.value = product.stock;
+    els.productImageUrl.value = product.imageUrl || "";
     els.saveProductButton.textContent = "Update Product";
 }
 
@@ -747,6 +764,18 @@ els.productGrid.addEventListener("click", event => {
         addToCart(Number(addButton.dataset.add));
     }
 });
+
+els.productGrid.addEventListener("error", event => {
+    const image = event.target.closest(".product-media img");
+
+    if (!image) {
+        return;
+    }
+
+    const media = image.closest(".product-media");
+    media.classList.remove("has-image");
+    media.textContent = media.dataset.fallback || "";
+}, true);
 
 els.cartList.addEventListener("click", event => {
     const inc = event.target.closest("[data-inc]");

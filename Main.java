@@ -31,17 +31,23 @@ class Product {
     private String category;
     private double price;
     private int stock;
+    private String imageUrl;
 
     public Product(int id, String name, String category, double price, int stock) {
+        this(id, name, category, price, stock, "");
+    }
+
+    public Product(int id, String name, String category, double price, int stock, String imageUrl) {
         this.id = id;
         this.name = name;
         this.category = category;
         this.price = price;
         this.stock = stock;
+        this.imageUrl = imageUrl;
     }
 
     public String toFileString() {
-        return id + "|" + clean(name) + "|" + clean(category) + "|" + price + "|" + stock;
+        return id + "|" + clean(name) + "|" + clean(category) + "|" + price + "|" + stock + "|" + clean(imageUrl);
     }
 
     public static Product fromFileString(String line) {
@@ -56,24 +62,26 @@ class Product {
         String category = parts[2];
         double price = Double.parseDouble(parts[3]);
         int stock = Integer.parseInt(parts[4]);
+        String imageUrl = parts.length >= 6 ? parts[5] : "";
 
-        return new Product(id, name, category, price, stock);
+        return new Product(id, name, category, price, stock, imageUrl);
     }
 
     public String toJson() {
         return String.format(
                 Locale.US,
-                "{\"id\":%d,\"name\":\"%s\",\"category\":\"%s\",\"price\":%.2f,\"stock\":%d}",
+                "{\"id\":%d,\"name\":\"%s\",\"category\":\"%s\",\"price\":%.2f,\"stock\":%d,\"imageUrl\":\"%s\"}",
                 id,
                 Main.escapeJson(name),
                 Main.escapeJson(category),
                 price,
-                stock
+                stock,
+                Main.escapeJson(imageUrl)
         );
     }
 
     private static String clean(String value) {
-        return value.replace("|", " ").trim();
+        return value == null ? "" : value.replace("|", " ").trim();
     }
 
     public int getId() {
@@ -96,6 +104,10 @@ class Product {
         return stock;
     }
 
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
     public void setName(String name) {
         this.name = name;
     }
@@ -110,6 +122,10 @@ class Product {
 
     public void setStock(int stock) {
         this.stock = stock;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public void reduceStock(int quantity) {
@@ -730,6 +746,7 @@ public class Main {
         String category = requireText(form, "category");
         double price = parseDouble(form.get("price"), "price");
         int stock = parseInt(form.get("stock"), "stock");
+        String imageUrl = normalizeImageUrl(form.getOrDefault("imageUrl", ""));
 
         if (price <= 0) {
             throw new ApiException(400, "Price must be greater than 0.");
@@ -742,7 +759,7 @@ public class Main {
         Product product;
 
         synchronized (STORE_LOCK) {
-            product = new Product(nextProductId, name, category, price, stock);
+            product = new Product(nextProductId, name, category, price, stock, imageUrl);
             products.add(product);
             nextProductId++;
             saveProductsToFile();
@@ -850,6 +867,10 @@ public class Main {
                 }
 
                 product.setStock(stock);
+            }
+
+            if (form.containsKey("imageUrl")) {
+                product.setImageUrl(normalizeImageUrl(form.get("imageUrl")));
             }
 
             saveProductsToFile();
@@ -1112,12 +1133,12 @@ public class Main {
     }
 
     private static void addDefaultProducts() {
-        products.add(new Product(1, "Ryzen 5 5600", "CPU", 12000, 10));
-        products.add(new Product(2, "RTX 4060", "GPU", 28000, 5));
-        products.add(new Product(3, "16GB DDR4 RAM", "RAM", 3200, 20));
-        products.add(new Product(4, "1TB NVMe SSD", "Storage", 5000, 15));
-        products.add(new Product(5, "MSI B550 Motherboard", "Motherboard", 9500, 8));
-        products.add(new Product(6, "650W Power Supply", "PSU", 4500, 12));
+        products.add(new Product(1, "Ryzen 5 5600", "CPU", 12000, 10, "/assets/products/cpu.svg"));
+        products.add(new Product(2, "RTX 4060", "GPU", 28000, 5, "/assets/products/gpu.svg"));
+        products.add(new Product(3, "16GB DDR4 RAM", "RAM", 3200, 20, "/assets/products/ram.svg"));
+        products.add(new Product(4, "1TB NVMe SSD", "Storage", 5000, 15, "/assets/products/storage.svg"));
+        products.add(new Product(5, "MSI B550 Motherboard", "Motherboard", 9500, 8, "/assets/products/motherboard.svg"));
+        products.add(new Product(6, "650W Power Supply", "PSU", 4500, 12, "/assets/products/psu.svg"));
         nextProductId = 7;
     }
 
@@ -1254,6 +1275,24 @@ public class Main {
         }
     }
 
+    private static String normalizeImageUrl(String value) {
+        if (!hasText(value)) {
+            return "";
+        }
+
+        String imageUrl = value.trim();
+        String lower = imageUrl.toLowerCase(Locale.ROOT);
+
+        if (lower.startsWith("http://")
+                || lower.startsWith("https://")
+                || lower.startsWith("assets/")
+                || lower.startsWith("/assets/")) {
+            return imageUrl;
+        }
+
+        throw new ApiException(400, "Image URL must start with http://, https://, /assets/, or assets/.");
+    }
+
     private static boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
     }
@@ -1308,6 +1347,11 @@ public class Main {
         byte[] bytes = Files.readAllBytes(file);
         exchange.getResponseHeaders().set("Content-Type", contentType(file));
         exchange.sendResponseHeaders(200, bytes.length);
+
+        if ("HEAD".equalsIgnoreCase(exchange.getRequestMethod())) {
+            return;
+        }
+
         exchange.getResponseBody().write(bytes);
     }
 
@@ -1328,6 +1372,10 @@ public class Main {
 
         if (name.endsWith(".png")) {
             return "image/png";
+        }
+
+        if (name.endsWith(".svg")) {
+            return "image/svg+xml";
         }
 
         if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {

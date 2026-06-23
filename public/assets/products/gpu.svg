@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Graphics card">
+  <rect width="640" height="360" fill="#f8fafc"/>
+  <rect x="78" y="82" width="464" height="188" rx="22" fill="#1e293b" stroke="#334155" stroke-width="8"/>
+  <rect x="514" y="132" width="52" height="86" rx="8" fill="#94a3b8"/>
+  <rect x="120" y="270" width="260" height="18" rx="6" fill="#c8a84a"/>
+  <circle cx="226" cy="176" r="70" fill="#0f172a" stroke="#64748b" stroke-width="8"/>
+  <circle cx="226" cy="176" r="24" fill="#1f7a8c"/>
+  <g fill="#94a3b8">
+    <path d="M226 112c20 24 22 42 0 64c-20-24-22-42 0-64z"/>
+    <path d="M290 176c-24 20-42 22-64 0c24-20 42-22 64 0z"/>
+    <path d="M226 240c-20-24-22-42 0-64c20 24 22 42 0 64z"/>
+    <path d="M162 176c24-20 42-22 64 0c-24 20-42 22-64 0z"/>
+  </g>
+  <circle cx="408" cy="176" r="70" fill="#0f172a" stroke="#64748b" stroke-width="8"/>
+  <circle cx="408" cy="176" r="24" fill="#1f7a8c"/>
+  <g fill="#94a3b8">
+    <path d="M408 112c20 24 22 42 0 64c-20-24-22-42 0-64z"/>
+    <path d="M472 176c-24 20-42 22-64 0c24-20 42-22 64 0z"/>
+    <path d="M408 240c-20-24-22-42 0-64c20 24 22 42 0 64z"/>
+    <path d="M344 176c24-20 42-22 64 0c-24 20-42 22-64 0z"/>
+  </g>
+  <text x="310" y="52" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#135465">GPU</text>
+</svg>

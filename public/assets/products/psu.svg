@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Power supply">
+  <rect width="640" height="360" fill="#f8fafc"/>
+  <rect x="142" y="82" width="356" height="206" rx="20" fill="#263241" stroke="#475569" stroke-width="8"/>
+  <circle cx="272" cy="185" r="74" fill="#0f172a" stroke="#94a3b8" stroke-width="8"/>
+  <circle cx="272" cy="185" r="24" fill="#1f7a8c"/>
+  <g fill="#64748b">
+    <path d="M272 122c18 22 20 41 0 63c-18-22-20-41 0-63z"/>
+    <path d="M335 185c-22 18-41 20-63 0c22-18 41-20 63 0z"/>
+    <path d="M272 248c-18-22-20-41 0-63c18 22 20 41 0 63z"/>
+    <path d="M209 185c22-18 41-20 63 0c-22 18-41 20-63 0z"/>
+  </g>
+  <rect x="382" y="124" width="74" height="36" rx="8" fill="#0f172a"/>
+  <rect x="382" y="178" width="74" height="18" rx="6" fill="#94a3b8"/>
+  <rect x="382" y="212" width="74" height="18" rx="6" fill="#94a3b8"/>
+  <text x="320" y="54" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="800" fill="#135465">Power Supply</text>
+</svg>
